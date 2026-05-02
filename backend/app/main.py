@@ -4,6 +4,7 @@ from .core.config import settings
 from .api.endpoints import auth, hotels, webhooks, applications, admin, sales, conversations, share, reports
 from .api.endpoints.preview_chat import router as preview_router
 from .api.endpoints.webhooks_whatsapp import router as whatsapp_router
+from .api.endpoints.demo_chat import router as demo_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -26,6 +27,7 @@ app.include_router(hotels.router)
 app.include_router(webhooks.router)
 app.include_router(whatsapp_router)
 app.include_router(preview_router)
+app.include_router(demo_router)
 app.include_router(admin.router)
 app.include_router(applications.router)
 app.include_router(sales.router)
