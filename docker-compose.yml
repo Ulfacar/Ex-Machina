@@ -33,6 +33,8 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/exmachina
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       SECRET_KEY: ${SECRET_KEY}
+      INVITE_CODE: ${INVITE_CODE:-LOCALDEV2026}
+      DEBUG: ${DEBUG:-false}
       WEBHOOK_BASE_URL: ${WEBHOOK_BASE_URL}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000}
       DEFAULT_AI_MODEL: ${DEFAULT_AI_MODEL:-anthropic/claude-3.5-haiku}

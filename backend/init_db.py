@@ -1,5 +1,5 @@
 """
-Initialize database - create all tables and demo user
+Initialize database - create all tables and demo users
 Run: python init_db.py
 """
 import asyncio
@@ -10,37 +10,45 @@ from app.db.models import User, Hotel, Client, Conversation, Message, ConfirmedB
 from app.core.security import get_password_hash
 
 
+DEMO_USERS = [
+    {"name": "Admin", "email": "admin@exmachine.ai", "password": "admin123", "role": "admin"},
+    {"name": "Partner Demo", "email": "partner@exmachine.ai", "password": "partner123", "role": "sales"},
+    {"name": "Demo User", "email": "demo@asystem.com", "password": "demo123", "role": "client"},
+]
+
+
 async def init_db():
     async with engine.begin() as conn:
-        # Drop all tables (CAUTION: This will delete all data!)
-        # await conn.run_sync(Base.metadata.drop_all)
-
-        # Create all tables
         await conn.run_sync(Base.metadata.create_all)
 
     print("[OK] Database initialized successfully!")
     print("Tables created: users, hotels, clients, conversations, messages")
 
-    # Create demo user
     async with AsyncSessionLocal() as session:
-        # Check if demo user already exists
-        result = await session.execute(
-            select(User).where(User.email == "demo@asystem.com")
-        )
-        existing_user = result.scalar_one_or_none()
-
-        if not existing_user:
-            demo_user = User(
-                name="Demo User",
-                email="demo@asystem.com",
-                hashed_password=get_password_hash("demo123"),
-                is_active=True
+        for u in DEMO_USERS:
+            result = await session.execute(
+                select(User).where(User.email == u["email"])
             )
-            session.add(demo_user)
-            await session.commit()
-            print("[OK] Demo user created: demo@asystem.com / demo123")
-        else:
-            print("[INFO] Demo user already exists")
+            existing = result.scalar_one_or_none()
+
+            if not existing:
+                user = User(
+                    name=u["name"],
+                    email=u["email"],
+                    hashed_password=get_password_hash(u["password"]),
+                    role=u["role"],
+                    is_active=True
+                )
+                session.add(user)
+                await session.commit()
+                print(f"[OK] {u['role']} user created: {u['email']} / {u['password']}")
+            else:
+                if existing.role != u["role"]:
+                    existing.role = u["role"]
+                    await session.commit()
+                    print(f"[OK] Updated {u['email']} role to {u['role']}")
+                else:
+                    print(f"[INFO] {u['role']} user already exists: {u['email']}")
 
 
 if __name__ == "__main__":
