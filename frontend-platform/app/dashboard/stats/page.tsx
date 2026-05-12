@@ -31,12 +31,8 @@ export default function StatsPage() {
   const { data: dailyUsage } = useQuery({
     queryKey: ['admin-daily-usage'],
     queryFn: async () => {
-      try {
-        const response = await api.get('/admin/stats/daily')
-        return response.data as AIUsageDetail[]
-      } catch {
-        return generateMockDailyData()
-      }
+      const response = await api.get('/admin/stats/daily')
+      return response.data as AIUsageDetail[]
     },
   })
 
@@ -216,21 +212,4 @@ export default function StatsPage() {
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr)
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
-}
-
-function generateMockDailyData(): AIUsageDetail[] {
-  const data: AIUsageDetail[] = []
-  const now = new Date()
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date(now)
-    date.setDate(date.getDate() - i)
-    data.push({
-      date: date.toISOString().split('T')[0],
-      conversations: Math.floor(Math.random() * 30) + 5,
-      prompt_tokens: Math.floor(Math.random() * 50000) + 10000,
-      completion_tokens: Math.floor(Math.random() * 20000) + 5000,
-      cost: parseFloat((Math.random() * 0.8 + 0.1).toFixed(3)),
-    })
-  }
-  return data
 }
