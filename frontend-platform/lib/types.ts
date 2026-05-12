@@ -180,7 +180,7 @@ export interface AdminStats {
   active_hotels: number
   total_conversations_month: number
   total_ai_cost_month: number
-  openrouter_balance: number
+  openrouter_balance: number | null
 }
 
 export interface AIUsageDetail {

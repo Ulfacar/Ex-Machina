@@ -22,7 +22,7 @@ export default function StatsPage() {
           active_hotels: hotels.filter((h: { is_active: boolean }) => h.is_active).length,
           total_conversations_month: 0,
           total_ai_cost_month: 0,
-          openrouter_balance: 0,
+          openrouter_balance: null,
         } as AdminStats
       }
     },
@@ -67,7 +67,18 @@ export default function StatsPage() {
               { label: 'Активных', value: stats.active_hotels, icon: Activity },
               { label: 'Диалогов / мес', value: stats.total_conversations_month, icon: MessageSquare },
               { label: 'AI расход / мес', value: `$${stats.total_ai_cost_month.toFixed(2)}`, icon: DollarSign, color: 'text-amber-600' },
-              { label: 'Баланс OpenRouter', value: `$${stats.openrouter_balance.toFixed(2)}`, icon: Wallet, color: stats.openrouter_balance < 20 ? 'text-red-600' : 'text-emerald-600', warn: stats.openrouter_balance < 20 },
+              {
+                label: 'Баланс OpenRouter',
+                value: stats.openrouter_balance == null ? '—' : `$${stats.openrouter_balance.toFixed(2)}`,
+                icon: Wallet,
+                color:
+                  stats.openrouter_balance == null
+                    ? 'text-[#737373]'
+                    : stats.openrouter_balance < 20
+                      ? 'text-red-600'
+                      : 'text-emerald-600',
+                warn: stats.openrouter_balance != null && stats.openrouter_balance < 20,
+              },
             ].map((kpi, i) => {
               const Icon = kpi.icon
               return (
