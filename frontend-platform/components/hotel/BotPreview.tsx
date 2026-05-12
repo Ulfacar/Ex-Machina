@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import api from '@/lib/api'
 import type { HotelFormData } from '@/lib/types'
 
 interface BotPreviewProps {
   formData: Partial<HotelFormData>
-  hotelId?: number
+  hotelId?: number // If set: call /preview-chat/simulate against saved hotel. Else: /preview-chat with formData.
   fullscreen?: boolean
 }
 
@@ -28,104 +29,85 @@ export function BotPreview({ formData, hotelId, fullscreen }: BotPreviewProps) {
     { role: 'bot', content: 'Здравствуйте! Чем могу помочь?' },
   ])
   const [input, setInput] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const generateBotResponse = (question: string): string => {
-    const lowerQ = question.toLowerCase()
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, isTyping])
 
-    // Цены
-    if (lowerQ.includes('цен') || lowerQ.includes('стоим') || lowerQ.includes('price')) {
-      if (formData.rooms && formData.rooms.length > 0) {
-        const roomsList = formData.rooms
-          .map((r) => `${r.name} (до ${r.capacity} гостей)`)
-          .join(', ')
-        return `Наши номера: ${roomsList}`
-      }
-      return 'Информация о ценах будет добавлена позже'
+  const sendToBackend = async (question: string, history: Message[]): Promise<string> => {
+    // Convert UI history → backend role names (bot → assistant), skip the static greeting.
+    const apiHistory = history
+      .slice(1)
+      .map((m) => ({
+        role: m.role === 'bot' ? 'assistant' : 'user',
+        content: m.content,
+      }))
+
+    if (hotelId) {
+      const res = await api.post('/preview-chat/simulate', {
+        hotel_id: hotelId,
+        message: question,
+        history: apiHistory,
+        use_staging: false,
+      })
+      if (res.data?.error) throw new Error(res.data.error)
+      return res.data.reply
     }
 
-    // Адрес
-    if (lowerQ.includes('адрес') || lowerQ.includes('address') || lowerQ.includes('где')) {
-      return formData.address || 'Адрес будет указан позже'
+    // Wizard mode — hotel not saved yet. Build hotel_data from in-flight formData.
+    const hotelData = {
+      name: formData.name || '',
+      description: formData.description || '',
+      address: formData.address || '',
+      phone: formData.phone || '',
+      email: formData.email || '',
+      website: formData.website || '',
+      rooms: formData.rooms || [],
+      rules: formData.rules || {},
+      amenities: formData.amenities || {},
+      communication_style: formData.communicationStyle || 'friendly',
+      ai_model: formData.aiModel || 'anthropic/claude-3.5-haiku',
+      languages: formData.languages || ['ru', 'en'],
     }
+    const res = await api.post('/preview-chat', {
+      message: question,
+      hotel_data: hotelData,
+      history: apiHistory,
+    })
+    return res.data.reply
+  }
 
-    // Телефон
-    if (lowerQ.includes('телефон') || lowerQ.includes('phone') || lowerQ.includes('контакт')) {
-      return formData.phone || 'Телефон будет указан позже'
-    }
+  const sendMessage = async (question: string) => {
+    if (!question.trim() || isTyping) return
 
-    // Check-in/out
-    if (lowerQ.includes('заезд') || lowerQ.includes('check-in') || lowerQ.includes('время')) {
-      const checkin = formData.rules?.checkin || '14:00'
-      const checkout = formData.rules?.checkout || '12:00'
-      return `Заезд с ${checkin}, выезд до ${checkout}`
-    }
+    const userMsg: Message = { role: 'user', content: question }
+    const nextHistory = [...messages, userMsg]
+    setMessages(nextHistory)
+    setInput('')
+    setIsTyping(true)
 
-    // Услуги
-    if (lowerQ.includes('услуг') || lowerQ.includes('удобств') || lowerQ.includes('service')) {
-      const amenities = formData.amenities
-      if (amenities && Object.values(amenities).some((v) => v)) {
-        const list = Object.entries(amenities)
-          .filter(([_, v]) => v)
-          .map(([key]) => {
-            const names: Record<string, string> = {
-              wifi: 'Wi-Fi',
-              parking: 'Парковка',
-              breakfast: 'Завтрак',
-              pool: 'Бассейн',
-              transfer: 'Трансфер',
-              excursions: 'Экскурсии',
-              conference: 'Конференц-зал',
-            }
-            return names[key] || key
-          })
-          .join(', ')
-        return `Доступные услуги: ${list}`
-      }
-      return 'Информация об услугах будет добавлена'
-    }
-
-    // Название отеля
-    if (lowerQ.includes('назва') || lowerQ.includes('name')) {
-      return formData.name || 'Название отеля будет указано'
-    }
-
-    // Описание
-    if (lowerQ.includes('расскаж') || lowerQ.includes('опис')) {
-      return formData.description || 'Описание отеля будет добавлено позже'
-    }
-
-    // Дефолтный ответ
-    const style = formData.communicationStyle || 'friendly'
-    if (style === 'friendly') {
-      return 'Извините, я пока не знаю ответа на этот вопрос. Спросите что-то ещё! 😊'
-    } else if (style === 'formal') {
-      return 'К сожалению, информация по этому вопросу пока недоступна.'
-    } else {
-      return 'Информация будет добавлена в ближайшее время.'
+    try {
+      const reply = await sendToBackend(question, nextHistory)
+      setMessages([...nextHistory, { role: 'bot', content: reply }])
+    } catch (err: unknown) {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
+        (err as Error)?.message ||
+        'Ошибка соединения. Попробуйте ещё раз.'
+      setMessages([...nextHistory, { role: 'bot', content: `⚠️ ${detail}` }])
+    } finally {
+      setIsTyping(false)
     }
   }
 
   const handleSend = () => {
-    if (!input.trim()) return
-
-    const userMessage: Message = { role: 'user', content: input }
-    const botResponse: Message = {
-      role: 'bot',
-      content: generateBotResponse(input),
-    }
-
-    setMessages([...messages, userMessage, botResponse])
-    setInput('')
+    void sendMessage(input)
   }
 
   const handleQuickQuestion = (question: string) => {
-    const userMessage: Message = { role: 'user', content: question }
-    const botResponse: Message = {
-      role: 'bot',
-      content: generateBotResponse(question),
-    }
-
-    setMessages([...messages, userMessage, botResponse])
+    void sendMessage(question)
   }
 
   return (
@@ -147,7 +129,7 @@ export function BotPreview({ formData, hotelId, fullscreen }: BotPreviewProps) {
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm ${
+              className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap ${
                 msg.role === 'user'
                   ? 'bg-[#1A1A1A] text-[#FAFAFA] border border-[#262626]'
                   : 'bg-[#3B82F6] text-white'
@@ -157,6 +139,18 @@ export function BotPreview({ formData, hotelId, fullscreen }: BotPreviewProps) {
             </div>
           </div>
         ))}
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="bg-[#3B82F6] text-white px-4 py-2.5 rounded-2xl text-sm">
+              <span className="inline-flex gap-1">
+                <span className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                <span className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                <span className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce" />
+              </span>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Quick questions */}
@@ -167,7 +161,8 @@ export function BotPreview({ formData, hotelId, fullscreen }: BotPreviewProps) {
             <button
               key={q}
               onClick={() => handleQuickQuestion(q)}
-              className="text-xs px-3 py-1.5 rounded-full border border-[#262626] text-[#A3A3A3] hover:bg-[#1A1A1A] transition-colors"
+              disabled={isTyping}
+              className="text-xs px-3 py-1.5 rounded-full border border-[#262626] text-[#A3A3A3] hover:bg-[#1A1A1A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {q}
             </button>
@@ -182,9 +177,10 @@ export function BotPreview({ formData, hotelId, fullscreen }: BotPreviewProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Введите вопрос..."
+            disabled={isTyping}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
           />
-          <Button onClick={handleSend} size="sm">
+          <Button onClick={handleSend} size="sm" disabled={isTyping || !input.trim()}>
             →
           </Button>
         </div>
