@@ -218,7 +218,7 @@ class AdminStats(BaseModel):
     active_hotels: int
     total_conversations_month: int
     total_ai_cost_month: float
-    openrouter_balance: float
+    openrouter_balance: Optional[float] = None  # None = unknown; UI renders "—"
 
 
 class AIUsageDaily(BaseModel):

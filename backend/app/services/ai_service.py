@@ -2,6 +2,7 @@
 AI Service for OpenRouter integration
 Handles communication with AI models (Haiku, GPT-4, Claude, etc.)
 """
+import httpx
 from openai import AsyncOpenAI
 from typing import List, Dict, Tuple, Optional
 from ..core.config import settings
@@ -320,6 +321,28 @@ class AIService:
         )
 
         return "".join(parts)
+
+    async def get_credit_balance(self) -> Optional[float]:
+        """Remaining OpenRouter credit (USD). None when unknown.
+
+        Renders as "—" in the UI; never falls back to 0.0 which would
+        falsely trigger the low-balance alarm.
+        """
+        if not settings.OPENROUTER_API_KEY:
+            return None
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.get(
+                    f"{settings.OPENROUTER_BASE_URL}/credits",
+                    headers={"Authorization": f"Bearer {settings.OPENROUTER_API_KEY}"},
+                )
+                r.raise_for_status()
+                data = r.json().get("data") or {}
+                total_credits = float(data.get("total_credits") or 0)
+                total_usage = float(data.get("total_usage") or 0)
+                return round(total_credits - total_usage, 2)
+        except Exception:
+            return None
 
 
 # Global instance

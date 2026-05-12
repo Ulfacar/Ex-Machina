@@ -7,6 +7,7 @@ from ...db.database import get_db
 from ...db.models import User, Hotel, Conversation, Message, AIUsage, Billing
 from ..dependencies import get_current_user
 from ..schemas import HotelWithStats, AdminStats, AIUsageDaily, BillingRecord, HotelStatsResponse, User as UserSchema
+from ...services.ai_service import ai_service
 from ...services.budget_service import budget_service
 from ...core.security import get_password_hash
 
@@ -182,7 +183,7 @@ async def get_admin_stats(
         active_hotels=active_hotels,
         total_conversations_month=total_conversations,
         total_ai_cost_month=round(total_ai_cost, 2),
-        openrouter_balance=0.0,  # TODO: fetch from OpenRouter API
+        openrouter_balance=await ai_service.get_credit_balance(),
     )
 
 
