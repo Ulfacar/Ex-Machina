@@ -232,6 +232,52 @@ export function Step3({ formData, updateFormData }: Step3Props) {
           />
         </div>
       </div>
+
+      {/* Стиль работы бота */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium text-[#FAFAFA]">Стиль работы бота</h3>
+        <p className="text-sm text-[#A3A3A3]">
+          Насколько активно бот предлагает услуги и трансфер
+        </p>
+
+        <div className="space-y-2">
+          {([
+            {
+              v: 'active',
+              title: 'Активный',
+              hint: 'Бот сам предлагает услуги, трансфер, экскурсии. Подходит если хотите максимум продаж.',
+            },
+            {
+              v: 'balanced',
+              title: 'Сбалансированный (рекомендуем)',
+              hint: 'Отвечает на вопросы, иногда предлагает релевантные услуги. Золотая середина.',
+            },
+            {
+              v: 'reserved',
+              title: 'Сдержанный',
+              hint: 'Только отвечает на вопросы, ничего не предлагает сам. Чётко и по делу.',
+            },
+          ] as const).map((opt) => (
+            <label
+              key={opt.v}
+              className="flex items-start gap-3 p-4 rounded-xl border border-[#262626] bg-[#141414] cursor-pointer transition-colors hover:bg-[#1A1A1A] has-[:checked]:border-[#3B82F6] has-[:checked]:bg-[#1A1A1A]"
+            >
+              <input
+                type="radio"
+                name="proactiveness"
+                value={opt.v}
+                checked={(formData.proactiveness || 'balanced') === opt.v}
+                onChange={() => updateFormData({ proactiveness: opt.v })}
+                className="mt-1 accent-[#3B82F6]"
+              />
+              <div>
+                <div className="font-medium text-[#FAFAFA] tracking-tight">{opt.title}</div>
+                <div className="text-sm text-[#A3A3A3] mt-0.5">{opt.hint}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
