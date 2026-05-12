@@ -11,7 +11,7 @@ import { CardSkeleton } from '@/components/ui/skeleton'
 import {
   ArrowLeft, Building2, Bot, MessageSquare, BarChart3,
   Cpu, Link2, Send, Settings, Pencil, Trash2, FlaskConical,
-  MessageCircle
+  MessageCircle, UserCog, TrendingUp
 } from 'lucide-react'
 import api from '@/lib/api'
 import type { Hotel } from '@/lib/types'
@@ -22,6 +22,9 @@ interface HotelStats {
   conversations_month: number
   requests_handled: number
   automation_rate: number
+  needs_operator_count: number
+  channels: { telegram: number; whatsapp: number }
+  daily: { date: string; count: number }[]
 }
 
 export default function HotelDetailPage() {
@@ -51,7 +54,16 @@ export default function HotelDetailPage() {
         const response = await api.get(`/hotels/${hotelId}/stats`)
         return response.data as HotelStats
       } catch {
-        return { messages_total: 0, conversations_total: 0, conversations_month: 0, requests_handled: 0, automation_rate: 0 } as HotelStats
+        return {
+          messages_total: 0,
+          conversations_total: 0,
+          conversations_month: 0,
+          requests_handled: 0,
+          automation_rate: 0,
+          needs_operator_count: 0,
+          channels: { telegram: 0, whatsapp: 0 },
+          daily: [],
+        } as HotelStats
       }
     },
     enabled: !!hotelId,
@@ -166,6 +178,70 @@ export default function HotelDetailPage() {
               )
             })}
           </div>
+
+          {/* Channel breakdown + manager transfers */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+            <Card className="p-4 lg:p-5 hover-lift hover:shadow-card-md">
+              <div className="flex items-center gap-2 mb-2">
+                <Send size={14} className="text-[#737373]" strokeWidth={1.5} />
+                <span className="text-xs text-[#737373] tracking-tight">Telegram</span>
+              </div>
+              <div className="text-2xl lg:text-3xl font-semibold tracking-tight mb-0.5 text-[#FAFAFA]">
+                {stats?.channels?.telegram || 0}
+              </div>
+              <div className="text-xs text-[#737373]">диалогов / мес</div>
+            </Card>
+            <Card className="p-4 lg:p-5 hover-lift hover:shadow-card-md">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageCircle size={14} className="text-[#737373]" strokeWidth={1.5} />
+                <span className="text-xs text-[#737373] tracking-tight">WhatsApp</span>
+              </div>
+              <div className="text-2xl lg:text-3xl font-semibold tracking-tight mb-0.5 text-[#FAFAFA]">
+                {stats?.channels?.whatsapp || 0}
+              </div>
+              <div className="text-xs text-[#737373]">диалогов / мес</div>
+            </Card>
+            <Card className="p-4 lg:p-5 col-span-2 lg:col-span-1 hover-lift hover:shadow-card-md">
+              <div className="flex items-center gap-2 mb-2">
+                <UserCog size={14} className="text-[#737373]" strokeWidth={1.5} />
+                <span className="text-xs text-[#737373] tracking-tight">Передано менеджеру</span>
+              </div>
+              <div className="text-2xl lg:text-3xl font-semibold tracking-tight mb-0.5 text-orange-400">
+                {stats?.needs_operator_count || 0}
+              </div>
+              <div className="text-xs text-[#737373]">потенциальные брони</div>
+            </Card>
+          </div>
+
+          {/* Daily chart */}
+          {stats?.daily && stats.daily.length > 0 && (
+            <Card>
+              <div className="flex items-center gap-2 mb-5">
+                <TrendingUp size={16} className="text-[#737373]" strokeWidth={1.5} />
+                <h3 className="text-base font-semibold tracking-tight text-[#FAFAFA]">Обращения по дням</h3>
+              </div>
+              <div className="space-y-2">
+                {stats.daily.slice(-14).map((day) => {
+                  const maxCount = Math.max(...stats.daily.map(d => d.count), 1)
+                  const pct = (day.count / maxCount) * 100
+                  return (
+                    <div key={day.date} className="flex items-center gap-3 text-sm">
+                      <span className="text-[#737373] w-20 shrink-0 text-xs tracking-tight">
+                        {new Date(day.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                      </span>
+                      <div className="flex-1 bg-[#1A1A1A] rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-[#3B82F6] rounded-full h-1.5 transition-all duration-500"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="font-mono text-xs w-8 text-right text-[#A3A3A3]">{day.count}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )}
 
           {/* Info */}
           <Card>
