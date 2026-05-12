@@ -144,4 +144,83 @@ TypeScript clean (`npx tsc --noEmit` — единственная ошибка �
 
 ---
 
-*Session 2026-05-12 закрыта. Sprint 3 первая story done. Demo-bot снова живой.*
+*~~Session 2026-05-12 закрыта. Sprint 3 первая story done. Demo-bot снова живой.~~* — сессия продолжилась (см. ниже).
+
+---
+
+# 🔄 Addendum (вечер 12.05) — Sprint 3 закрыт 5 stories, аудит merge `73637de`
+
+После первой story Алан выбрал продолжать. Сессия превратилась в полный audit merge'а Emir'а — обнаружено ещё **3 silent regression**, все закрыты в той же сессии.
+
+## Closed stories (итого 5)
+
+| # | Story | Severity | Коммиты |
+|---|---|---|---|
+| 1 | Demo-bot regression fix | P0 sales-killer | `5bf028a` + `eeca6ce` |
+| 2 | `/dashboard/stats $0.00` → real OpenRouter `/credits` | P1 sales-confidence | `6b097eb` + `cdb388e` |
+| 3 | Wizard redirect `/hotels/{id}` → `/hotels/{id}/demo` (the wow moment) | P0 wow-moment | `6bdf07c` |
+| 4 | Hotel owner analytics UI (channels TG/WA + transfers + daily chart) | P1 owner-facing | `71d9946` |
+| 5 | Wizard proactiveness radio (active/balanced/reserved) | P2 feature | `c169336` |
+
+**Все 4 regression (#1, #3, #4, #5) — из одного merge'а `73637de` (16.04, Emir's frontend redesign).** Pattern одинаковый: Emir's fork отделился до апрельских feature-PR'ов Алана, merge затащил стейл-версии. Подтверждена гипотеза Mary с первого раунда: "один root cause, несколько surface'ов".
+
+## Метод аудита (для следующего merge)
+
+Через `git diff bb91c23 73637de` по high-risk файлам:
+- Считать `api.X()` вызовы pre/post — drops = подозрение
+- Diff `router.push|window.location` — потерянные UX redirects
+- Diff `stats?.X|hotel.X` field references — отвалившиеся UI секции
+- Сверять frontend interface с backend response shape
+
+**Чек-лист стоит зафиксировать в `docs/process/merge_discipline.md`** для будущих merge feature-веток с fork'а.
+
+## Тестовое покрытие
+
+10 новых pytest, all pass:
+- `test_simulate_chat.py` (6): happy / history / staging / cross-owner / not-found / no-prompt
+- `test_openrouter_balance.py` (4): happy / no-key / HTTP fail / malformed payload
+
+## Тулчейн
+
+`ccusage` (npm v18.0.11) установлен. Total spend Feb→May: $756.50.
+
+## Trello
+
+2 карточки закрыты:
+- `BUG: /hotels/{id}/demo bot returns 'не знаю ответа' (static stub)` → Done с комментарием root-cause + commit-refs
+- `/dashboard/stats — 'Пополните баланс $0.00' looks like product is broken` → Done
+
+4 cp1251-мождибейк имени расщифрованы. (Side-finding: `scripts/seed_trello.py` создаёт карточки в cp1251 URL-encode — пофиксить before следующего seed.)
+
+## Финальное состояние коммитов
+
+**8 unpushed коммитов на конец 12.05 вечера:**
+```
+c169336  fix(wizard): proactiveness radio
+71d9946  fix(hotel-detail): owner analytics (channels, transfers, daily chart)
+6bdf07c  fix(wizard): redirect to /demo (wow moment)
+cdb388e  fix(stats-ui): "—" for null balance
+6b097eb  feat(stats): real OpenRouter balance + 4 tests
+ecb813c  docs: SESSION_RECAP 2026-05-12
+eeca6ce  fix(demo-bot): restore AI integration in BotPreview
+5bf028a  test(simulate-chat): regression tests
+```
+
+## Follow-ups для Sprint 4
+
+1. **High priority:** Conversation с Эмиром про rebase + diff-review (иначе следующий merge → та же яма)
+2. Playwright E2E на `/hotels/{id}/demo` + wizard happy-path → wow moment
+3. `generateMockDailyData()` в `stats/page.tsx:213` — генерирует рандом если API падает; молча показывает фейк
+4. `FullWizard.tsx` — orphan-component, удалить или использовать как референс
+5. `scripts/seed_trello.py` encoding fix
+6. Audit `app/page.tsx` (landing, 508 lines merged) — pending landing-strategy
+
+## Что ждём от тебя
+
+1. **`git push`** 8 коммитов (push'ишь сам)
+2. **WA Назире:** "Ты лендинг показываешь клиентам, или сразу демо-ссылку?" — разблокирует landing thread
+3. **WA Эмиру:** конструктивно поделиться merge-discipline урок'ом (4 silent regression жили 26 дней — sales surface был молча сломан)
+
+---
+
+*Session 2026-05-12 закрыта. Sprint 3 закрыт 5 stories. Sales surface восстановлен.*
