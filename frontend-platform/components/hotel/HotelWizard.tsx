@@ -120,7 +120,7 @@ export function HotelWizard() {
 
       const response = await api.post('/hotels', payload)
       const hotelId = response.data.id
-      router.push(`/hotels/${hotelId}`)
+      router.push(`/hotels/${hotelId}/demo`)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Ошибка создания бота')
     } finally {
