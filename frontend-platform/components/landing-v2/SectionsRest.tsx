@@ -26,7 +26,7 @@ export function ROICalculator() {
   const avgStay = 2.4;
   const recoveredRevenue = recoveredBookings * adr * avgStay;
   const monthlyRev = Math.round(recoveredRevenue / 12);
-  const monthlyCost = 20 + Math.min(40, msgs * 0.04 * 30);
+  const monthlyCost = 40 + Math.min(40, msgs * 0.04 * 30);
   const roiX = monthlyCost > 0 ? Math.round((monthlyRev / 90) / monthlyCost) : 0;
 
   return (
@@ -193,36 +193,21 @@ export function Pricing() {
           Никаких процентов с броней, никаких сюрпризов. AI-расходы оплачиваете напрямую — мы только собираем платформу.
         </p>
 
-        <div className="pricing-grid">
-          <div className="price-card reveal" data-delay="2">
-            <div className="name">Self-serve</div>
-            <div className="desc">Для отелей, готовых пройти визард самостоятельно.</div>
+        <div className="pricing-grid" style={{ justifyContent: "center" }}>
+          <div className="price-card feature reveal" data-delay="2">
+            <div className="name">Полный онбординг</div>
+            <div className="desc">Мы сами настроим, обучим персонал, подключим каналы и доведём бота до боевого режима.</div>
             <div className="price-row">
-              <div className="price">$0<small>/онбординг</small></div>
-              <div className="sub-price">+ $20/мес подписка</div>
+              <div className="price">$800<small>/единоразово</small></div>
+              <div className="sub-price">+ $40/мес платформа</div>
             </div>
             <ul>
-              <li><CheckIcon /> WhatsApp + Telegram</li>
-              <li><CheckIcon /> Визард, промпты, эскалация</li>
-              <li><CheckIcon /> ROI-дашборд</li>
-              <li><CheckIcon /> Бюджет $5–40/мес на AI</li>
-              <li><CheckIcon /> Email-поддержка</li>
-            </ul>
-            <button className="cta primary">Попробовать бесплатно <ArrowIcon className="arrow" style={{ marginLeft: 6 }} /></button>
-          </div>
-
-          <div className="price-card feature reveal" data-delay="3">
-            <div className="name">С онбордингом</div>
-            <div className="desc">Мы сами настроим, обучим персонал, подключим каналы.</div>
-            <div className="price-row">
-              <div className="price">$700<small>/единоразово</small></div>
-              <div className="sub-price">+ $20/мес подписка</div>
-            </div>
-            <ul>
-              <li><CheckIcon /> Всё из Self-serve</li>
-              <li><CheckIcon /> Настройка под ваш отель</li>
+              <li><CheckIcon /> WhatsApp + Telegram, оба канала</li>
+              <li><CheckIcon /> Настройка под ваш отель (промпт, тон, реквизиты)</li>
               <li><CheckIcon /> Обучение менеджеров (онлайн)</li>
-              <li><CheckIcon /> Тонкая настройка тона и стиля</li>
+              <li><CheckIcon /> Двусторонний канал manager ↔ гость</li>
+              <li><CheckIcon /> ROI-дашборд + ежемесячный отчёт</li>
+              <li><CheckIcon /> AI-расходы включены ($5–40/мес зависит от потока)</li>
               <li><CheckIcon /> Приоритетная поддержка в Telegram</li>
               <li><CheckIcon /> 30 дней — гарантия возврата</li>
             </ul>
