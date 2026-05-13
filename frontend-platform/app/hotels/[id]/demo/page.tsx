@@ -7,11 +7,14 @@ import { BotPreview } from '@/components/hotel/BotPreview'
 import api from '@/lib/api'
 import type { Hotel } from '@/lib/types'
 
+type HealthStatus = 'checking' | 'live' | 'down'
+
 export default function DemoPage() {
   const params = useParams()
   const router = useRouter()
   const [hotel, setHotel] = useState<Hotel | null>(null)
   const [loading, setLoading] = useState(true)
+  const [health, setHealth] = useState<HealthStatus>('checking')
 
   useEffect(() => {
     const fetchHotel = async () => {
@@ -27,6 +30,24 @@ export default function DemoPage() {
 
     if (params.id) fetchHotel()
   }, [params.id, router])
+
+  useEffect(() => {
+    let cancelled = false
+    const check = async () => {
+      try {
+        const res = await api.get('/health', { timeout: 5000 })
+        if (!cancelled) setHealth(res.data?.status === 'ok' ? 'live' : 'down')
+      } catch {
+        if (!cancelled) setHealth('down')
+      }
+    }
+    check()
+    const interval = setInterval(check, 30000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [])
 
   if (loading) {
     return (
@@ -62,7 +83,34 @@ export default function DemoPage() {
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div>
             <h1 className="text-white font-semibold">{hotel.name}</h1>
-            <p className="text-neutral-400 text-sm">AI-ассистент готов к работе</p>
+            <div className="flex items-center gap-2 text-sm">
+              <p className="text-neutral-400">AI-ассистент готов к работе</p>
+              <span className="text-neutral-600">·</span>
+              <span className="flex items-center gap-1.5">
+                <span
+                  className={
+                    'inline-block w-2 h-2 rounded-full ' +
+                    (health === 'live'
+                      ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)] animate-pulse'
+                      : health === 'down'
+                      ? 'bg-red-500'
+                      : 'bg-neutral-500 animate-pulse')
+                  }
+                />
+                <span
+                  className={
+                    'text-xs font-mono ' +
+                    (health === 'live'
+                      ? 'text-emerald-400'
+                      : health === 'down'
+                      ? 'text-red-400'
+                      : 'text-neutral-500')
+                  }
+                >
+                  {health === 'live' ? 'API · live' : health === 'down' ? 'API · offline' : 'API · …'}
+                </span>
+              </span>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button
